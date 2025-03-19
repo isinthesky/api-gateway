@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - BACKEND_URL=http://mock-service:8081
+      - ALLOWED_ORIGINS=*
+      - JWT_SECRET=your-secret-key-change-in-production
+      - JWT_ISSUER=api-gateway
+      - JWT_EXPIRATION=3600
+      - ENABLE_METRICS=true
+      - LOG_LEVEL=info
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - prometheus
+      - mock-service
+    restart: unless-stopped
+    networks:
+      - gateway-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - gateway-network
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - gateway-network
+
+  mock-service:
+    image: mockoon/cli:latest
+    volumes:
+      - ./config/mockoon.json:/data/mockoon.json
+    command: ["--data", "/data/mockoon.json", "--hostname", "0.0.0.0"]
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    networks:
+      - gateway-network
+
+networks:
+  gateway-network:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:

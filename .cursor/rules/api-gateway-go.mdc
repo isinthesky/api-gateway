@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# project guide 
+
+[guide.md](mdc:docs/guide.md)

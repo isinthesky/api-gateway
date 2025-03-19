@@ -1,0 +1,70 @@
+# Go 빌드 파일 및 바이너리
+/bin/
+/pkg/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# IDE 관련 파일
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Go 모듈 관련
+vendor/
+
+# 환경 설정 파일
+.env
+.env.*
+!.env.example
+
+# 로그 파일
+*.log
+logs/
+
+# 빌드 디렉토리
+/build/
+/dist/
+
+# 임시 파일
+*.tmp
+/tmp/
+
+# 설정 파일 (예시 제외)
+/config/*.yaml
+/config/*.yml
+/config/*.json
+!/config/*.example.yaml
+!/config/*.example.yml
+!/config/*.example.json
+
+# 인증서 및 키 파일
+*.pem
+*.key
+*.crt
+
+# 모니터링 및 프로파일링 데이터
+*.prof
+*.trace
+*.heap
+
+# 문서 생성 파일
+/docs/api/
+
+# 도커 데이터
+.docker/
+docker-data/
+
+# 디버그 바이너리
+debug
+__debug_bin
+
+# 테스트 커버리지 파일
+coverage.txt
+coverage.html
