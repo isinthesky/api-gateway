@@ -1,11 +1,11 @@
-FROM golang:1.20-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # 작업 디렉토리 설정
 WORKDIR /app
 
 # 의존성 설치를 위한 모듈 파일 복사
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod tidy && go mod download
 
 # 소스 코드 복사
 COPY . .
