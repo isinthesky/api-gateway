@@ -1,0 +1,36 @@
+# .air.toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# Go 빌드 명령어
+cmd = "go build -o ./tmp/main ."
+# 빌드된 바이너리 경로
+bin = "tmp/main"
+# 감시할 파일 확장자
+include_ext = ["go", "json"]
+# 제외할 디렉토리
+exclude_dir = ["assets", "tmp", "vendor"]
+# 제외할 파일
+exclude_file = []
+# 감시 활성화 여부
+delay = 1000 # ms
+# 빌드 시 중지
+stop_on_error = true
+# 로그 출력
+log = "air.log"
+
+[log]
+# 상세 로그 표시 여부
+time = true
+
+[color]
+# 커스텀 색상 설정
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+
+[misc]
+# 종료 시 임시 디렉토리 삭제
+clean_on_exit = true
