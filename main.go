@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -94,49 +95,122 @@ func main() {
 	// HTTP 프록시 설정
 	httpProxy := proxy.NewHTTPProxy(cfg.BackendBaseURL)
 
-	// JWT 인증 미들웨어 설정
-	jwtConfig := middleware.JWTConfig{
-		SecretKey:       cfg.JWTSecret,
-		Issuer:          cfg.JWTIssuer,
-		ExpirationDelta: cfg.JWTExpirationDelta,
+	// 정렬된 라우트 로깅
+	log.Println("=== 라우트 순서 확인 ===")
+	for i, route := range routesJSON.Routes {
+		log.Printf("%d: %s -> %s", i+1, route.Path, route.TargetURL)
 	}
-	jwtAuthMiddleware := middleware.JWTAuthMiddleware(jwtConfig)
+	log.Println("========================")
 
-	// 각 라우트 설정
+	// 라우트를 그룹화
+	var rootRoutes []RouteConfig        // 루트 경로 라우트 ("/")
+	var apiRoutes []RouteConfig         // API 관련 라우트 ("/api/*")
+	var specificRoutes []RouteConfig    // 특정 경로 라우트 (예: "/login")
+	var rootCatchAllRoute *RouteConfig  // 루트 캐치올 라우트 ("/*proxyPath")
+
 	for _, route := range routesJSON.Routes {
-		handlers := []gin.HandlerFunc{}
-
-		// JWT 인증이 필요한 경우
-		if route.RequireAuth {
-			handlers = append(handlers, jwtAuthMiddleware)
+		if route.Path == "/" {
+			rootRoutes = append(rootRoutes, route)
+		} else if strings.HasPrefix(route.Path, "/api") {
+			apiRoutes = append(apiRoutes, route)
+		} else if route.Path == "/*proxyPath" {
+			routeCopy := route
+			rootCatchAllRoute = &routeCopy
+		} else {
+			specificRoutes = append(specificRoutes, route)
 		}
+	}
 
+	// JWT 인증 미들웨어 설정 (인증 스킵을 위해 주석 처리)
+	// jwtConfig := middleware.JWTConfig{
+	// 	SecretKey:       cfg.JWTSecret,
+	// 	Issuer:          cfg.JWTIssuer,
+	// 	ExpirationDelta: cfg.JWTExpirationDelta,
+	// }
+	// jwtAuthMiddleware := middleware.JWTAuthMiddleware(jwtConfig)
+
+	// 1. 루트 라우트 등록
+	for _, route := range rootRoutes {
+		registerRoute(router, httpProxy, route)
+	}
+
+	// 2. 특정 경로 라우트 등록
+	for _, route := range specificRoutes {
+		registerRoute(router, httpProxy, route)
+	}
+
+	// 3. API 라우트 등록 (그룹 사용)
+	apiGroup := router.Group("/api")
+	for _, route := range apiRoutes {
+		// "/api" 접두사 제거
+		subPath := strings.TrimPrefix(route.Path, "/api")
+		log.Printf("API 그룹 라우트 등록: %s -> %s", subPath, route.TargetURL)
+		
+		handlers := []gin.HandlerFunc{}
+		
+		// JWT 인증이 필요한 경우
+		// if route.RequireAuth {
+		// 	handlers = append(handlers, jwtAuthMiddleware)
+		// }
+		
 		// 프록시 핸들러 추가
 		stripPath := route.StripPrefix != ""
 		handlers = append(handlers, proxy.HTTPProxyHandler(httpProxy, route.TargetURL, stripPath))
-
-		// 지원하는 HTTP 메서드에 따라 라우트 등록
+		
+		// HTTP 메서드에 따라 라우트 등록
 		for _, method := range route.Methods {
 			switch method {
 			case "GET":
-				router.GET(route.Path, handlers...)
+				apiGroup.GET(subPath, handlers...)
 			case "POST":
-				router.POST(route.Path, handlers...)
+				apiGroup.POST(subPath, handlers...)
 			case "PUT":
-				router.PUT(route.Path, handlers...)
+				apiGroup.PUT(subPath, handlers...)
 			case "DELETE":
-				router.DELETE(route.Path, handlers...)
+				apiGroup.DELETE(subPath, handlers...)
 			case "PATCH":
-				router.PATCH(route.Path, handlers...)
+				apiGroup.PATCH(subPath, handlers...)
 			case "HEAD":
-				router.HEAD(route.Path, handlers...)
+				apiGroup.HEAD(subPath, handlers...)
 			case "OPTIONS":
-				router.OPTIONS(route.Path, handlers...)
+				apiGroup.OPTIONS(subPath, handlers...)
 			}
 		}
 	}
 
-	// WebSocket 프록시 설정 (routes.json과 충돌하지 않는 경로 사용)
+	// 4. 루트 캐치올 라우트 등록 (있는 경우)
+	if rootCatchAllRoute != nil {
+		log.Println("루트 캐치올 라우트 등록:", rootCatchAllRoute.Path, "->", rootCatchAllRoute.TargetURL)
+		
+		// 캐치올 라우트를 API 경로와 충돌하지 않도록 명시적으로 등록
+		wildcardHandlers := []gin.HandlerFunc{
+			proxy.HTTPProxyHandler(httpProxy, rootCatchAllRoute.TargetURL, false),
+		}
+		
+		// 특정 경로를 제외한 나머지 경로에 대해 캐치올 처리
+		for _, method := range rootCatchAllRoute.Methods {
+			log.Printf("캐치올 핸들러 등록: %s /web/* -> %s", method, rootCatchAllRoute.TargetURL)
+			router.Handle(method, "/web/*path", wildcardHandlers...)
+			
+			log.Printf("캐치올 핸들러 등록: %s /assets/* -> %s", method, rootCatchAllRoute.TargetURL)
+			router.Handle(method, "/assets/*path", wildcardHandlers...)
+			
+			log.Printf("캐치올 핸들러 등록: %s /static/* -> %s", method, rootCatchAllRoute.TargetURL)
+			router.Handle(method, "/static/*path", wildcardHandlers...)
+			
+			// 필요한 경우 다른 경로도 추가
+		}
+		
+		// NoRoute 핸들러 등록 (매칭되지 않는 모든 경로)
+		router.NoRoute(func(c *gin.Context) {
+			log.Printf("NoRoute 핸들러: %s %s -> %s", c.Request.Method, c.Request.URL.Path, rootCatchAllRoute.TargetURL)
+			
+			// 프록시 핸들러 실행
+			proxy.HTTPProxyHandler(httpProxy, rootCatchAllRoute.TargetURL, false)(c)
+		})
+	}
+
+	// WebSocket 프록시 설정
 	wsUpgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -161,3 +235,39 @@ func main() {
 		log.Fatalf("서버 시작 오류: %v", err)
 	}
 }
+
+// registerRoute는 기본 라우터에 라우트를 등록하는 헬퍼 함수입니다.
+func registerRoute(router *gin.Engine, httpProxy *proxy.HTTPProxy, route RouteConfig) {
+	handlers := []gin.HandlerFunc{}
+
+	// JWT 인증이 필요한 경우
+	// if route.RequireAuth {
+	// 	handlers = append(handlers, jwtAuthMiddleware)
+	// }
+
+	// 프록시 핸들러 추가
+	stripPath := route.StripPrefix != ""
+	handlers = append(handlers, proxy.HTTPProxyHandler(httpProxy, route.TargetURL, stripPath))
+
+	// 지원하는 HTTP 메서드에 따라 라우트 등록
+	for _, method := range route.Methods {
+		log.Printf("라우트 등록: %s %s -> %s", method, route.Path, route.TargetURL)
+		switch method {
+		case "GET":
+			router.GET(route.Path, handlers...)
+		case "POST":
+			router.POST(route.Path, handlers...)
+		case "PUT":
+			router.PUT(route.Path, handlers...)
+		case "DELETE":
+			router.DELETE(route.Path, handlers...)
+		case "PATCH":
+			router.PATCH(route.Path, handlers...)
+		case "HEAD":
+			router.HEAD(route.Path, handlers...)
+		case "OPTIONS":
+			router.OPTIONS(route.Path, handlers...)
+		}
+	}
+}
+

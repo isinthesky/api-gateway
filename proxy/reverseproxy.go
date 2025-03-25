@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -37,16 +38,21 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetPath string, stripPath bool) gin.H
 		}
 		
 		// 리버스 프록시 생성
-		reverseProxy := httputil.NewSingleHostReverseProxy(proxy.backendURL)
+		reverseProxy := httputil.NewSingleHostReverseProxy(targetURL)
 		
 		// 프록시 디렉터 설정
 		originalDirector := reverseProxy.Director
 		reverseProxy.Director = func(req *http.Request) {
 			originalDirector(req)
 			
+			// 요청 경로와 대상 URL 로그 출력
+			log.Printf("[PROXY] 요청 경로: %s %s -> 대상 URL: %s://%s%s", 
+				req.Method, req.URL.Path, 
+				targetURL.Scheme, targetURL.Host, targetURL.Path)
+
 			// 기본 설정
-			req.URL.Scheme = proxy.backendURL.Scheme
-			req.URL.Host = proxy.backendURL.Host
+			req.URL.Scheme = targetURL.Scheme
+			req.URL.Host = targetURL.Host
 			
 			// 경로 설정
 			if stripPath {
@@ -60,29 +66,41 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetPath string, stripPath bool) gin.H
 				if p != "" && p != "/" {
 					req.URL.Path = req.URL.Path + p
 				}
+				
+				// 스트립 경로 로그 추가
+				log.Printf("[PROXY] 경로 스트립 적용: 원본=%s 변환=%s", c.FullPath(), req.URL.Path)
 			} else {
 				// 대상 경로 뒤에 현재 경로 추가
-				req.URL.Path = targetURL.Path + req.URL.Path
+				if targetURL.Path != "" && targetURL.Path != "/" {
+					req.URL.Path = targetURL.Path
+				}
 			}
 			
 			// 기존 호스트 헤더 유지
 			if _, ok := req.Header["Host"]; !ok {
-				req.Header["Host"] = []string{proxy.backendURL.Host}
+				req.Header["Host"] = []string{targetURL.Host}
 			}
 			
 			// 원본 IP 헤더 추가
 			req.Header.Set("X-Forwarded-For", c.ClientIP())
 			req.Header.Set("X-Real-IP", c.ClientIP())
+			
+			// 최종 프록시 대상 로그 출력
+			log.Printf("[PROXY] 최종 프록시 대상: %s://%s%s", req.URL.Scheme, req.URL.Host, req.URL.Path)
 		}
 		
 		// 프록시 응답 처리자 설정
 		reverseProxy.ModifyResponse = func(resp *http.Response) error {
-			// 필요한 경우 응답 수정 로직 추가
+			// 응답 상태 코드 로그 출력
+			log.Printf("[PROXY] 응답: %s %s -> 상태 코드: %d", 
+				c.Request.Method, c.Request.URL.Path, resp.StatusCode)
 			return nil
 		}
 		
 		// 오류 처리자 설정
 		reverseProxy.ErrorHandler = func(rw http.ResponseWriter, req *http.Request, err error) {
+			log.Printf("[PROXY] 오류 발생: %s %s -> 오류: %v", 
+				req.Method, req.URL.Path, err)
 			c.JSON(http.StatusBadGateway, gin.H{
 				"error": "백엔드 서비스 오류",
 			})
