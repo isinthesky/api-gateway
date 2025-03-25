@@ -61,14 +61,14 @@ func LoadConfig() *Config {
 	}
 
 	// 타임아웃 설정
-	readTimeout, err := strconv.Atoi(getEnv("READ_TIMEOUT", "30"))
+	readTimeout, err := strconv.Atoi(getEnv("READ_TIMEOUT", "20"))
 	if err != nil {
-		readTimeout = 30
+		readTimeout = 20
 	}
 
-	writeTimeout, err := strconv.Atoi(getEnv("WRITE_TIMEOUT", "30"))
+	writeTimeout, err := strconv.Atoi(getEnv("WRITE_TIMEOUT", "20"))
 	if err != nil {
-		writeTimeout = 30
+		writeTimeout = 20
 	}
 
 	idleTimeout, err := strconv.Atoi(getEnv("IDLE_TIMEOUT", "120"))
@@ -82,9 +82,9 @@ func LoadConfig() *Config {
 		rateLimitWindow = 60
 	}
 
-	rateLimitMaxReqs, err := strconv.Atoi(getEnv("RATE_LIMIT_MAX_REQUESTS", "100"))
+	rateLimitMaxReqs, err := strconv.Atoi(getEnv("RATE_LIMIT_MAX_REQUESTS", "200"))
 	if err != nil {
-		rateLimitMaxReqs = 100
+		rateLimitMaxReqs = 200
 	}
 
 	// CORS 허용 오리진 목록 (쉼표로 구분된 문자열)

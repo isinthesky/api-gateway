@@ -46,13 +46,16 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetPath string, stripPath bool) gin.H
 			originalDirector(req)
 			
 			// 요청 경로와 대상 URL 로그 출력
-			log.Printf("[PROXY] 요청 경로: %s %s -> 대상 URL: %s://%s%s", 
-				req.Method, req.URL.Path, 
+			log.Printf("[PROXY] 요청 경로: %s %s?%s -> 대상 URL: %s://%s%s", 
+				req.Method, req.URL.Path, req.URL.RawQuery,
 				targetURL.Scheme, targetURL.Host, targetURL.Path)
 
 			// 기본 설정
 			req.URL.Scheme = targetURL.Scheme
 			req.URL.Host = targetURL.Host
+			
+			// 원본 쿼리 파라미터 저장
+			originalQuery := req.URL.RawQuery
 			
 			// 경로 설정
 			if stripPath {
@@ -76,6 +79,9 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetPath string, stripPath bool) gin.H
 				}
 			}
 			
+			// 쿼리 파라미터 복원
+			req.URL.RawQuery = originalQuery
+			
 			// 기존 호스트 헤더 유지
 			if _, ok := req.Header["Host"]; !ok {
 				req.Header["Host"] = []string{targetURL.Host}
@@ -86,7 +92,7 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetPath string, stripPath bool) gin.H
 			req.Header.Set("X-Real-IP", c.ClientIP())
 			
 			// 최종 프록시 대상 로그 출력
-			log.Printf("[PROXY] 최종 프록시 대상: %s://%s%s", req.URL.Scheme, req.URL.Host, req.URL.Path)
+			log.Printf("[PROXY] 최종 프록시 대상: %s://%s%s?%s", req.URL.Scheme, req.URL.Host, req.URL.Path, req.URL.RawQuery)
 		}
 		
 		// 프록시 응답 처리자 설정
