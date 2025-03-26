@@ -5,10 +5,13 @@ go 1.21
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang/mock v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.5.1
+	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/prometheus/client_golang v1.21.1
 	github.com/stretchr/testify v1.10.0
+	github.com/gavv/httpexpect/v2 v2.15.0
 )
 
 require (
