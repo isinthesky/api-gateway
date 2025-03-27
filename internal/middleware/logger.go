@@ -168,6 +168,11 @@ func StructuredLogger() gin.HandlerFunc {
 	logger := NewLogger(false) // 기본 텍스트 형식 사용
 
 	return func(c *gin.Context) {
+		// /health 엔드포인트는 로깅하지 않음
+		if c.Request.URL.Path == "/health" {
+			c.Next()
+			return
+		}
 		// 시작 시간
 		start := time.Now()
 

@@ -50,6 +50,12 @@ func (w *metricsResponseWriter) Size() int {
 // Metrics는 메트릭을 수집하는 미들웨어입니다.
 func Metrics(collector *metrics.Collector) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// /health 엔드포인트는 메트릭에서 제외
+		if c.Request.URL.Path == "/health" {
+			c.Next()
+			return
+		}
+		
 		// 시작 시간
 		start := time.Now()
 
@@ -155,6 +161,12 @@ func RateLimitMetrics(collector *metrics.Collector) gin.HandlerFunc {
 // DetailedMetricsMiddleware는 기본적인 Prometheus 메트릭을 수집하는 미들웨어입니다. (구버전 호환용)
 func DetailedMetricsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// /health 엔드포인트는 메트릭에서 제외
+		if c.Request.URL.Path == "/health" {
+			c.Next()
+			return
+		}
+
 		start := time.Now()
 		path := c.FullPath()
 		if path == "" {
