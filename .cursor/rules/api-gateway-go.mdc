@@ -6,4 +6,4 @@ alwaysApply: true
 
 # project guide 
 
-[guide.md](mdc:docs/guide.md)
+[refac-guide.md](mdc:docs/guide/refac-guide.md)

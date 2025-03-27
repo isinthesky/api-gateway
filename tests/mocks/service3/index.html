@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service 3 - API Gateway Mock</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #27ae60;
+            padding-bottom: 10px;
+        }
+        .card {
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 5px solid #27ae60;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .endpoint {
+            font-weight: bold;
+            color: #16a085;
+        }
+        .response {
+            background-color: #e8f8f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Service 3 - API Gateway Mock</h1>
+    
+    <div class="card">
+        <h2>서비스 정보</h2>
+        <p>이 서비스는 API Gateway 테스트용 모의 서비스입니다.</p>
+        <p>서비스 상태: <strong>온라인</strong></p>
+        <p>서비스 ID: <code>service3</code></p>
+    </div>
+    
+    <div class="card">
+        <h2>사용 가능한 엔드포인트</h2>
+        
+        <div>
+            <p class="endpoint">GET /</p>
+            <p>기본 정보 페이지 (현재 페이지)</p>
+        </div>
+        
+        <div>
+            <p class="endpoint">GET /orders</p>
+            <p>주문 목록 반환</p>
+            <div class="response">
+                <code>
+                {
+                    "orders": [
+                        {"id": 1, "user_id": 1, "total": 300, "status": "completed"},
+                        {"id": 2, "user_id": 2, "total": 150, "status": "pending"},
+                        {"id": 3, "user_id": 1, "total": 500, "status": "processing"}
+                    ]
+                }
+                </code>
+            </div>
+        </div>
+        
+        <div>
+            <p class="endpoint">GET /orders/:id</p>
+            <p>특정 주문 정보 반환</p>
+            <div class="response">
+                <code>
+                {
+                    "id": 1,
+                    "user_id": 1,
+                    "total": 300,
+                    "status": "completed",
+                    "items": [
+                        {"product_id": 1, "quantity": 2, "price": 100},
+                        {"product_id": 3, "quantity": 1, "price": 100}
+                    ],
+                    "shipping_address": "123 Main St, Seoul, Korea",
+                    "payment_method": "credit_card",
+                    "created_at": "2023-08-01T10:30:00Z"
+                }
+                </code>
+            </div>
+        </div>
+        
+        <div>
+            <p class="endpoint">POST /orders</p>
+            <p>새 주문 생성</p>
+            <p>요청 예시:</p>
+            <div class="response">
+                <code>
+                {
+                    "user_id": 1,
+                    "items": [
+                        {"product_id": 1, "quantity": 2},
+                        {"product_id": 3, "quantity": 1}
+                    ],
+                    "shipping_address": "123 Main St, Seoul, Korea",
+                    "payment_method": "credit_card"
+                }
+                </code>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>테스트 지침</h2>
+        <p>API Gateway를 통해 이 서비스에 액세스하려면 다음 URL을 사용하세요:</p>
+        <p><code>http://localhost:8080/api/orders</code></p>
+    </div>
+</body>
+</html>

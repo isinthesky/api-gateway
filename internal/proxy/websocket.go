@@ -10,14 +10,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// WebSocketProxy는 WebSocket 연결을 프록시하는 구조체입니다.
-type WebSocketProxy struct {
+// WSProxy는 WebSocket 연결을 프록시하는 구조체입니다.
+type WSProxy struct {
 	backendURL *url.URL
 	upgrader   websocket.Upgrader
 }
 
-// NewWebSocketProxy는 새로운 WebSocket 프록시를 생성합니다.
-func NewWebSocketProxy(backendBaseURL string) (*WebSocketProxy, error) {
+// NewWSProxy는 새로운 WebSocket 프록시를 생성합니다.
+func NewWSProxy(backendBaseURL string) (*WSProxy, error) {
 	url, err := url.Parse(backendBaseURL)
 	if err != nil {
 		return nil, err
@@ -33,14 +33,14 @@ func NewWebSocketProxy(backendBaseURL string) (*WebSocketProxy, error) {
 		},
 	}
 
-	return &WebSocketProxy{
+	return &WSProxy{
 		backendURL: url,
 		upgrader:   upgrader,
 	}, nil
 }
 
-// WebSocketProxyHandler는 WebSocket 연결을 프록시하는 Gin 핸들러 함수를 반환합니다.
-func WebSocketProxyHandler(proxy *WebSocketProxy) gin.HandlerFunc {
+// WSProxyHandler는 WebSocket 연결을 프록시하는 Gin 핸들러 함수를 반환합니다.
+func WSProxyHandler(proxy *WSProxy) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 클라이언트와의 WebSocket 연결 업그레이드
 		clientConn, err := proxy.upgrader.Upgrade(c.Writer, c.Request, nil)

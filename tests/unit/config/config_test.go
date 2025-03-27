@@ -1,107 +1,174 @@
+// +build unit
+
 package config_test
 
 import (
-    "os"
-    "testing"
-    "time"
+	"os"
+	"testing"
+	"time"
 
-    "github.com/stretchr/testify/assert"
-    "github.com/isinthesky/api-gateway/config"
+	"github.com/isinthesky/api-gateway/internal/config"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestLoadConfig(t *testing.T) {
-    // 원래 환경 변수 저장
-    originalPort := os.Getenv("PORT")
-    originalBackendURL := os.Getenv("BACKEND_BASE_URL")
-    originalLogLevel := os.Getenv("LOG_LEVEL")
-    originalRoutesPath := os.Getenv("ROUTES_CONFIG_PATH")
-    
-    // 테스트 종료 후 원래 환경 변수 복원
-    defer func() {
-        os.Setenv("PORT", originalPort)
-        os.Setenv("BACKEND_BASE_URL", originalBackendURL)
-        os.Setenv("LOG_LEVEL", originalLogLevel)
-        os.Setenv("ROUTES_CONFIG_PATH", originalRoutesPath)
-    }()
-    
-    // 테스트를 위한 환경 변수 설정
-    os.Setenv("PORT", "9090")
-    os.Setenv("BACKEND_BASE_URL", "http://test-backend:8000")
-    os.Setenv("LOG_LEVEL", "debug")
-    os.Setenv("ROUTES_CONFIG_PATH", "./test-routes.json")
-    os.Setenv("JWT_SECRET", "test-jwt-secret")
-    os.Setenv("JWT_ISSUER", "test-issuer")
-    os.Setenv("JWT_EXPIRATION_DELTA", "7200")
-    os.Setenv("ALLOWED_ORIGINS", "http://example.com,https://test.com")
-    os.Setenv("RATE_LIMIT_WINDOW", "60")
-    os.Setenv("RATE_LIMIT_MAX_REQUESTS", "100")
-    os.Setenv("READ_TIMEOUT", "30")
-    os.Setenv("WRITE_TIMEOUT", "30")
-    os.Setenv("IDLE_TIMEOUT", "60")
-    os.Setenv("MAX_REQUEST_SIZE", "10")
-    os.Setenv("ENABLE_METRICS", "true")
-    
-    // 설정 로드
-    cfg := config.LoadConfig()
-    
-    // 설정값 검증
-    assert.Equal(t, 9090, cfg.Port, "포트가 올바르게 로드되어야 함")
-    assert.Equal(t, "http://test-backend:8000", cfg.BackendBaseURL, "백엔드 URL이 올바르게 로드되어야 함")
-    assert.Equal(t, "debug", cfg.LogLevel, "로그 레벨이 올바르게 로드되어야 함")
-    assert.Equal(t, "./test-routes.json", cfg.RoutesConfigPath, "라우트 설정 경로가 올바르게 로드되어야 함")
-    assert.Equal(t, "test-jwt-secret", cfg.JWTSecret, "JWT 시크릿이 올바르게 로드되어야 함")
-    assert.Equal(t, "test-issuer", cfg.JWTIssuer, "JWT 발급자가 올바르게 로드되어야 함")
-    assert.Equal(t, 7200, cfg.JWTExpirationDelta, "JWT 만료 시간이 올바르게 로드되어야 함")
-    assert.Equal(t, []string{"http://example.com", "https://test.com"}, cfg.AllowedOrigins, "허용된 출처가 올바르게 로드되어야 함")
-    assert.Equal(t, 60*time.Second, cfg.RateLimitWindow, "비율 제한 윈도우가 올바르게 로드되어야 함")
-    assert.Equal(t, 100, cfg.RateLimitMaxReqs, "최대 요청 수가 올바르게 로드되어야 함")
-    assert.Equal(t, 30*time.Second, cfg.ReadTimeout, "읽기 타임아웃이 올바르게 로드되어야 함")
-    assert.Equal(t, 30*time.Second, cfg.WriteTimeout, "쓰기 타임아웃이 올바르게 로드되어야 함")
-    assert.Equal(t, 60*time.Second, cfg.IdleTimeout, "유휴 타임아웃이 올바르게 로드되어야 함")
-    assert.Equal(t, int64(10*1024*1024), cfg.MaxRequestSize, "최대 요청 크기가 올바르게 로드되어야 함")
-    assert.Equal(t, true, cfg.EnableMetrics, "메트릭 활성화 여부가 올바르게 로드되어야 함")
-}
+func TestConfig(t *testing.T) {
+	// 환경 변수 초기화
+	os.Clearenv()
 
-func TestDefaultConfig(t *testing.T) {
-    // 모든 환경 변수 저장
-    originalEnv := make(map[string]string)
-    for _, key := range []string{
-        "PORT", "BACKEND_BASE_URL", "LOG_LEVEL", "ROUTES_CONFIG_PATH",
-        "JWT_SECRET", "JWT_ISSUER", "JWT_EXPIRATION_DELTA",
-        "ALLOWED_ORIGINS", "RATE_LIMIT_WINDOW", "RATE_LIMIT_MAX_REQUESTS",
-        "READ_TIMEOUT", "WRITE_TIMEOUT", "IDLE_TIMEOUT",
-        "MAX_REQUEST_SIZE", "ENABLE_METRICS",
-    } {
-        originalEnv[key] = os.Getenv(key)
-        os.Unsetenv(key)
-    }
-    
-    // 테스트 종료 후 환경 변수 복원
-    defer func() {
-        for key, value := range originalEnv {
-            if value != "" {
-                os.Setenv(key, value)
-            }
-        }
-    }()
-    
-    // 기본 설정 로드
-    cfg := config.LoadConfig()
-    
-    // 기본값 검증
-    assert.Equal(t, 8080, cfg.Port, "기본 포트는 8080이어야 함")
-    assert.Equal(t, "http://localhost:8000", cfg.BackendBaseURL, "기본 백엔드 URL이 올바라야 함")
-    assert.Equal(t, "info", cfg.LogLevel, "기본 로그 레벨은 info여야 함")
-    assert.Equal(t, "./routes.json", cfg.RoutesConfigPath, "기본 라우트 설정 경로가 올바라야 함")
-    assert.Equal(t, "your-secret-key", cfg.JWTSecret, "기본 JWT 시크릿이 올바라야 함")
-    assert.Equal(t, "api-gateway", cfg.JWTIssuer, "기본 JWT 발급자가 올바라야 함")
-    assert.Equal(t, 3600, cfg.JWTExpirationDelta, "기본 JWT 만료 시간이 올바라야 함")
-    assert.Equal(t, []string{"*"}, cfg.AllowedOrigins, "기본적으로 모든 출처를 허용해야 함")
-    assert.Equal(t, 60*time.Second, cfg.RateLimitWindow, "기본 비율 제한 윈도우가 올바라야 함")
-    assert.Equal(t, 100, cfg.RateLimitMaxReqs, "기본 최대 요청 수가 올바라야 함")
-    assert.Equal(t, 10*time.Second, cfg.ReadTimeout, "기본 읽기 타임아웃이 올바라야 함")
-    assert.Equal(t, 10*time.Second, cfg.WriteTimeout, "기본 쓰기 타임아웃이 올바라야 함")
-    assert.Equal(t, 30*time.Second, cfg.IdleTimeout, "기본 유휴 타임아웃이 올바라야 함")
-    assert.Equal(t, int64(5*1024*1024), cfg.MaxRequestSize, "기본 최대 요청 크기가 올바라야 함")
-    assert.Equal(t, false, cfg.EnableMetrics, "기본적으로 메트릭은 비활성화되어야 함")
+	t.Run("Default Values", func(t *testing.T) {
+		// 기본값 테스트
+		cfg, err := config.Load()
+		assert.NoError(t, err)
+		assert.NotNil(t, cfg)
+
+		// 기본값 확인
+		assert.Equal(t, 8080, cfg.Port)
+		assert.Equal(t, "http://localhost:8081", cfg.DefaultBackend)
+		assert.Equal(t, "your-secret-key", cfg.JWTSecret)
+		assert.Equal(t, "api-gateway", cfg.JWTIssuer)
+		assert.Equal(t, 3600*time.Second, cfg.JWTExpirationDelta)
+		assert.Equal(t, []string{"*"}, cfg.AllowedOrigins)
+		assert.Equal(t, true, cfg.EnableMetrics)
+		assert.Equal(t, "info", cfg.LogLevel)
+		assert.Equal(t, int64(10*1024*1024), cfg.MaxContentSize) // 10MB
+		assert.Equal(t, 20*time.Second, cfg.ReadTimeout)
+		assert.Equal(t, 20*time.Second, cfg.WriteTimeout)
+		assert.Equal(t, 120*time.Second, cfg.IdleTimeout)
+		assert.Equal(t, 60*time.Second, cfg.RateLimitWindow)
+		assert.Equal(t, 200, cfg.RateLimitMaxReqs)
+		assert.Equal(t, "configs/routes.json", cfg.RoutesConfigPath)
+	})
+
+	t.Run("Custom Values", func(t *testing.T) {
+		// 환경 변수 설정
+		os.Setenv("PORT", "9090")
+		os.Setenv("BACKEND_URL", "http://custom-backend:8000")
+		os.Setenv("JWT_SECRET", "custom-secret-key")
+		os.Setenv("JWT_ISSUER", "custom-issuer")
+		os.Setenv("JWT_EXPIRATION", "7200")
+		os.Setenv("ALLOWED_ORIGINS", "http://example.com,http://localhost:3000")
+		os.Setenv("ENABLE_METRICS", "false")
+		os.Setenv("LOG_LEVEL", "debug")
+		os.Setenv("MAX_CONTENT_SIZE", "5242880") // 5MB
+		os.Setenv("READ_TIMEOUT", "30")
+		os.Setenv("WRITE_TIMEOUT", "30")
+		os.Setenv("IDLE_TIMEOUT", "180")
+		os.Setenv("RATE_LIMIT_WINDOW", "120")
+		os.Setenv("RATE_LIMIT_MAX_REQUESTS", "100")
+		os.Setenv("ROUTES_CONFIG_PATH", "custom/routes.json")
+		os.Setenv("ENABLE_CACHING", "false")
+		os.Setenv("BACKEND_URLS", "http://backend1:8001,http://backend2:8002")
+
+		// 사용자 지정 값 테스트
+		cfg, err := config.Load()
+		assert.NoError(t, err)
+		assert.NotNil(t, cfg)
+
+		// 사용자 지정 값 확인
+		assert.Equal(t, 9090, cfg.Port)
+		assert.Equal(t, "http://custom-backend:8000", cfg.DefaultBackend)
+		assert.Equal(t, "custom-secret-key", cfg.JWTSecret)
+		assert.Equal(t, "custom-issuer", cfg.JWTIssuer)
+		assert.Equal(t, 7200*time.Second, cfg.JWTExpirationDelta)
+		assert.ElementsMatch(t, []string{"http://example.com", "http://localhost:3000"}, cfg.AllowedOrigins)
+		assert.Equal(t, false, cfg.EnableMetrics)
+		assert.Equal(t, "debug", cfg.LogLevel)
+		assert.Equal(t, int64(5242880), cfg.MaxContentSize) // 5MB
+		assert.Equal(t, 30*time.Second, cfg.ReadTimeout)
+		assert.Equal(t, 30*time.Second, cfg.WriteTimeout)
+		assert.Equal(t, 180*time.Second, cfg.IdleTimeout)
+		assert.Equal(t, 120*time.Second, cfg.RateLimitWindow)
+		assert.Equal(t, 100, cfg.RateLimitMaxReqs)
+		assert.Equal(t, "custom/routes.json", cfg.RoutesConfigPath)
+		assert.Equal(t, false, cfg.EnableCaching)
+		assert.ElementsMatch(t, []string{"http://backend1:8001", "http://backend2:8002"}, cfg.Backends)
+	})
+
+	t.Run("Invalid Values", func(t *testing.T) {
+		// 잘못된 환경 변수 설정
+		os.Setenv("PORT", "invalid")
+		os.Setenv("JWT_EXPIRATION", "invalid")
+		os.Setenv("ENABLE_METRICS", "invalid")
+		os.Setenv("MAX_CONTENT_SIZE", "invalid")
+		os.Setenv("READ_TIMEOUT", "invalid")
+
+		// 잘못된 값 테스트 (기본값으로 대체)
+		cfg, err := config.Load()
+		assert.NoError(t, err)
+		assert.NotNil(t, cfg)
+
+		// 기본값으로 대체 확인
+		assert.Equal(t, 8080, cfg.Port)
+		assert.Equal(t, 3600*time.Second, cfg.JWTExpirationDelta)
+		assert.Equal(t, true, cfg.EnableMetrics)
+		assert.Equal(t, int64(10*1024*1024), cfg.MaxContentSize)
+		assert.Equal(t, 20*time.Second, cfg.ReadTimeout)
+	})
+
+	t.Run("LoadRoutes", func(t *testing.T) {
+		// 테스트 라우트 구성 파일 생성
+		testRoutesJSON := `{
+			"routes": [
+				{
+					"path": "/",
+					"targetURL": "http://test:8081",
+					"methods": ["GET"],
+					"stripPrefix": "",
+					"requireAuth": false,
+					"cacheable": true,
+					"timeout": 30
+				},
+				{
+					"path": "/api/test",
+					"targetURL": "http://test:8082/test",
+					"methods": ["GET", "POST"],
+					"stripPrefix": "/api",
+					"requireAuth": true,
+					"cacheable": false,
+					"timeout": 20
+				}
+			]
+		}`
+
+		// 임시 라우트 파일 생성
+		tempFile, err := os.CreateTemp("", "test-routes-*.json")
+		assert.NoError(t, err)
+		defer os.Remove(tempFile.Name())
+
+		_, err = tempFile.WriteString(testRoutesJSON)
+		assert.NoError(t, err)
+		tempFile.Close()
+
+		// 환경 변수 설정
+		os.Setenv("ROUTES_CONFIG_PATH", tempFile.Name())
+
+		// 설정 로드
+		cfg, err := config.Load()
+		assert.NoError(t, err)
+		assert.NotNil(t, cfg)
+
+		// 라우트 로드
+		routes, err := cfg.LoadRoutes()
+		assert.NoError(t, err)
+		assert.NotNil(t, routes)
+		assert.Equal(t, 2, len(routes))
+
+		// 첫 번째 라우트 확인
+		assert.Equal(t, "/", routes[0].Path)
+		assert.Equal(t, "http://test:8081", routes[0].TargetURL)
+		assert.ElementsMatch(t, []string{"GET"}, routes[0].Methods)
+		assert.Equal(t, "", routes[0].StripPrefix)
+		assert.Equal(t, false, routes[0].RequireAuth)
+		assert.Equal(t, true, routes[0].Cacheable)
+		assert.Equal(t, 30, routes[0].Timeout)
+
+		// 두 번째 라우트 확인
+		assert.Equal(t, "/api/test", routes[1].Path)
+		assert.Equal(t, "http://test:8082/test", routes[1].TargetURL)
+		assert.ElementsMatch(t, []string{"GET", "POST"}, routes[1].Methods)
+		assert.Equal(t, "/api", routes[1].StripPrefix)
+		assert.Equal(t, true, routes[1].RequireAuth)
+		assert.Equal(t, false, routes[1].Cacheable)
+		assert.Equal(t, 20, routes[1].Timeout)
+	})
 }

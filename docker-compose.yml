@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=info
+      - BACKEND_URLS=http://service1:8081,http://service2:8082,http://service3:8083
+      - JWT_SECRET=your-secret-key-change-in-production
+      - JWT_ISSUER=api-gateway
+      - JWT_EXPIRATION=3600
+      - ALLOWED_ORIGINS=*
+      - ENABLE_METRICS=true
+      - ENABLE_CACHING=true
+      - ROUTES_CONFIG_PATH=/configs/routes.json
+    volumes:
+      - ./configs:/configs
+    depends_on:
+      - service1
+      - service2
+      - service3
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - gateway-network
+    healthcheck:
+      test: ["CMD", "/gateway", "health"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # 모의 백엔드 서비스들
+  service1:
+    image: nginx:alpine
+    container_name: service1
+    volumes:
+      - ./tests/mocks/service1:/usr/share/nginx/html
+    ports:
+      - "8081:80"
+    networks:
+      - gateway-network
+
+  service2:
+    image: nginx:alpine
+    container_name: service2
+    volumes:
+      - ./tests/mocks/service2:/usr/share/nginx/html
+    ports:
+      - "8082:80"
+    networks:
+      - gateway-network
+
+  service3:
+    image: nginx:alpine
+    container_name: service3
+    volumes:
+      - ./tests/mocks/service3:/usr/share/nginx/html
+    ports:
+      - "8083:80"
+    networks:
+      - gateway-network
+
+  # Prometheus 모니터링
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - gateway-network
+
+  # Grafana 대시보드
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    restart: unless-stopped
+    networks:
+      - gateway-network
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  gateway-network:
+    driver: bridge

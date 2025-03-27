@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service 1 - API Gateway Mock</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .card {
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .endpoint {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        .response {
+            background-color: #e8f4fc;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Service 1 - API Gateway Mock</h1>
+    
+    <div class="card">
+        <h2>서비스 정보</h2>
+        <p>이 서비스는 API Gateway 테스트용 모의 서비스입니다.</p>
+        <p>서비스 상태: <strong>온라인</strong></p>
+        <p>서비스 ID: <code>service1</code></p>
+    </div>
+    
+    <div class="card">
+        <h2>사용 가능한 엔드포인트</h2>
+        
+        <div>
+            <p class="endpoint">GET /</p>
+            <p>기본 정보 페이지 (현재 페이지)</p>
+        </div>
+        
+        <div>
+            <p class="endpoint">GET /api/status</p>
+            <p>서비스 상태 정보 반환</p>
+            <div class="response">
+                <code>
+                {
+                    "service": "service1",
+                    "status": "online",
+                    "version": "1.0.0",
+                    "timestamp": "2023-08-01T12:34:56Z"
+                }
+                </code>
+            </div>
+        </div>
+        
+        <div>
+            <p class="endpoint">GET /api/users</p>
+            <p>사용자 목록 반환</p>
+            <div class="response">
+                <code>
+                {
+                    "users": [
+                        {"id": 1, "name": "User 1"},
+                        {"id": 2, "name": "User 2"},
+                        {"id": 3, "name": "User 3"}
+                    ]
+                }
+                </code>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h2>테스트 지침</h2>
+        <p>API Gateway를 통해 이 서비스에 액세스하려면 다음 URL을 사용하세요:</p>
+        <p><code>http://localhost:8080/</code> 또는 <code>http://localhost:8080/api/users</code></p>
+    </div>
+</body>
+</html>

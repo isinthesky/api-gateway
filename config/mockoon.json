@@ -1,0 +1,219 @@
+{
+  "uuid": "d6a43360-a28d-11ee-8c90-0242ac120002",
+  "name": "API Gateway Mock APIs",
+  "port": 8081,
+  "hostname": "0.0.0.0",
+  "routes": [
+    {
+      "uuid": "dbb13ab0-a28d-11ee-8c90-0242ac120002",
+      "method": "get",
+      "endpoint": "users",
+      "responses": [
+        {
+          "uuid": "e0ad15e0-a28d-11ee-8c90-0242ac120002",
+          "body": "[{\"id\":1,\"name\":\"User 1\",\"email\":\"user1@example.com\"},{\"id\":2,\"name\":\"User 2\",\"email\":\"user2@example.com\"},{\"id\":3,\"name\":\"User 3\",\"email\":\"user3@example.com\"}]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Success",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "e86d8520-a28d-11ee-8c90-0242ac120002",
+      "method": "get",
+      "endpoint": "users/:id",
+      "responses": [
+        {
+          "uuid": "ef1cbad0-a28d-11ee-8c90-0242ac120002",
+          "body": "{\"id\":{{urlParam 'id'}},\"name\":\"User {{urlParam 'id'}}\",\"email\":\"user{{urlParam 'id'}}@example.com\"}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Success",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "f41c6910-a28d-11ee-8c90-0242ac120002",
+      "method": "post",
+      "endpoint": "users",
+      "responses": [
+        {
+          "uuid": "f81f8100-a28d-11ee-8c90-0242ac120002",
+          "body": "{\"id\":4,\"name\":\"{{body 'name'}}\",\"email\":\"{{body 'email'}}\"}",
+          "latency": 0,
+          "statusCode": 201,
+          "label": "Success",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "fc1dc1c0-a28d-11ee-8c90-0242ac120002",
+      "method": "post",
+      "endpoint": "auth/login",
+      "responses": [
+        {
+          "uuid": "00d63830-a28e-11ee-8c90-0242ac120002",
+          "body": "{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE5MTYyMzkwMjIsInJvbGVzIjpbInVzZXIiXX0.8KdYKSbKAUBsHBGx3-YCNZOVeWKAUtQpK5-SBKLcwOQ\"}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Success",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "Set-Cookie",
+              "value": "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE5MTYyMzkwMjIsInJvbGVzIjpbInVzZXIiXX0.8KdYKSbKAUBsHBGx3-YCNZOVeWKAUtQpK5-SBKLcwOQ; HttpOnly; Path=/"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "0e051ef0-a28e-11ee-8c90-0242ac120002",
+      "method": "get",
+      "endpoint": "products",
+      "responses": [
+        {
+          "uuid": "116bc8a0-a28e-11ee-8c90-0242ac120002",
+          "body": "[{\"id\":1,\"name\":\"Product 1\",\"price\":19.99},{\"id\":2,\"name\":\"Product 2\",\"price\":29.99},{\"id\":3,\"name\":\"Product 3\",\"price\":39.99}]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Success",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    },
+    {
+      "uuid": "15781290-a28e-11ee-8c90-0242ac120002",
+      "method": "get",
+      "endpoint": "healthz",
+      "responses": [
+        {
+          "uuid": "1943dab0-a28e-11ee-8c90-0242ac120002",
+          "body": "{\"status\":\"ok\"}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Success",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "filePath": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true
+        }
+      ],
+      "enabled": true,
+      "responseMode": null
+    }
+  ],
+  "proxyMode": false,
+  "proxyHost": "",
+  "proxyRemovePrefix": false,
+  "proxyCertificateKey": "",
+  "proxyCertificatePath": "",
+  "tlsOptions": {
+    "enabled": false,
+    "type": "CERT",
+    "pfxPath": "",
+    "certPath": "",
+    "keyPath": "",
+    "caPath": "",
+    "passphrase": ""
+  },
+  "cors": true,
+  "headers": [
+    {
+      "key": "Content-Type",
+      "value": "application/json"
+    }
+  ],
+  "proxyReqHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ],
+  "proxyResHeaders": [
+    {
+      "key": "",
+      "value": ""
+    }
+  ]
+}

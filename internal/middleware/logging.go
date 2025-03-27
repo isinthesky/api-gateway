@@ -52,8 +52,8 @@ func LoggingMiddleware() gin.HandlerFunc {
 	}
 }
 
-// MetricsMiddleware는 Prometheus 메트릭을 수집하는 미들웨어입니다.
-func MetricsMiddleware() gin.HandlerFunc {
+// BasicMetricsMiddleware는 Prometheus 메트릭을 수집하는 미들웨어입니다.
+func BasicMetricsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.FullPath()
