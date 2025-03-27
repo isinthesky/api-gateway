@@ -1,7 +1,25 @@
 {"routes":[
     {
-        "path":"/api/v1/users",
-        "targetURL":"http://users-service:8082/api/v1/users",
+        "path": "/api/v1/main/*path",
+        "targetURL": "http://receipt-service:8000",
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "stripPrefix":"",
+        "requireAuth": true,
+        "cacheable":false,
+        "timeout":20
+    },
+    {
+        "path":"/api/v1/auth/*path",
+        "targetURL":"http://auth-service:8000/api/v1/auth",
+        "methods":["GET","POST","PUT","DELETE"],
+        "stripPrefix":"",
+        "requireAuth":false,
+        "cacheable":false,
+        "timeout":20
+    },
+    {
+        "path":"/api/v1/users/*path",
+        "targetURL":"http://auth-service:8000/api/v1/users",
         "methods":["GET","POST","PUT","DELETE"],
         "stripPrefix":"",
         "requireAuth":true,
@@ -9,22 +27,12 @@
         "timeout":20
     },
     {
-        "path":"/api/v1/auth",
-        "targetURL":"http://auth-service:8084/api/v1/auth",
+        "path":"/*path",
+        "targetURL":"http://web-client:3000",
         "methods":["GET","POST","PUT","DELETE"],
         "stripPrefix":"",
-        "requireAuth":true,
-        "cacheable":false,
-        "timeout":20
-    },
-    {
-        "path":"/api/v1/main",
-        "targetURL":"http://products-service:8083/api/v1/main",
-        "methods":["GET","POST","PUT","DELETE"],
-        "stripPrefix":"",
-        "requireAuth":true,
+        "requireAuth":false,
         "cacheable":false,
         "timeout":20
     }
 ]}
-

@@ -22,30 +22,39 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o gateway ./cmd/gateway
 
 # 2. 최종 이미지
-FROM scratch
+FROM alpine:latest
 
 # 타임존 데이터 및 인증서 복사
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
+# curl 설치 (헬스체크용)
+RUN apk add --no-cache curl
+
 # 바이너리 및 설정 파일 복사
-COPY --from=builder /build/gateway /gateway
-COPY --from=builder /build/configs /configs
+COPY --from=builder /build/gateway /usr/local/bin/gateway
+COPY --from=builder /build/configs /etc/gateway/configs
+
+# 작업 디렉토리 생성
+WORKDIR /app
 
 # 비특권 사용자로 실행 (보안 강화)
 USER 1000:1000
 
 # 환경 변수 설정
-ENV PORT=8080 \
+ENV PORT=8000 \
     LOG_LEVEL=info \
-    ROUTES_CONFIG_PATH=/configs/routes.json
+    ROUTES_CONFIG_PATH=/etc/gateway/configs/routes.json \
+    BACKEND_URL=http://receipt-service:8000 \
+    FRONTEND_URL=http://web-client:3000 \
+    AUTH_API_URL=http://auth-service:8000
 
 # 상태 점검 설정
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD [ "/gateway", "health" ] || exit 1
+  CMD curl -f http://localhost:8000/health || exit 1
 
 # 포트 노출
-EXPOSE 8080
+EXPOSE 8000
 
 # 컨테이너 실행 명령
-ENTRYPOINT ["/gateway"]
+ENTRYPOINT ["/usr/local/bin/gateway"]
