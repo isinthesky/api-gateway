@@ -1,117 +1,154 @@
-package resilience_test
+// +build integration
+
+package resilience
 
 import (
-    "net/http"
-    "testing"
-    "time"
+	"net/http"
+	"testing"
+	"time"
 
-    "github.com/gavv/httpexpect/v2"
-    "github.com/isinthesky/api-gateway/tests/integration"
-    "github.com/isinthesky/api-gateway/tests/mocks"
-    "github.com/isinthesky/api-gateway/tests/utils"
+	"github.com/gavv/httpexpect/v2"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/isinthesky/api-gateway/tests/integration"
+	"github.com/isinthesky/api-gateway/tests/mocks"
 )
 
 func TestCircuitBreaker(t *testing.T) {
-    // 테스트 환경 설정
-    setup := integration.NewTestSetup(t)
-    defer setup.Cleanup()
-    
-    // 로거 설정
-    logger := utils.NewTestLogger(utils.LevelDebug)
-    testLogger := logger.TestContext("서킷 브레이커 테스트")
-    
-    // 장애 서버 설정
-    testLogger.Info("장애 시뮬레이션 서버 시작 중...")
-    faultServer := mocks.NewFaultServer()
-    defer faultServer.Close()
-    
-    testLogger.Info("장애 서버 URL: %s", faultServer.URL())
-    
-    // httpexpect 인스턴스 생성
-    e := httpexpect.New(t, "http://localhost:18080")
-    
-    // 서킷 브레이커 동작 테스트
-    t.Run("서킷 브레이커 트립", func(t *testing.T) {
-        subLogger := logger.TestContext("서킷 브레이커 트립 테스트")
-        subLogger.Info("실패 임계값을 초과하도록 여러 실패 요청 전송 중...")
-        
-        var circuitOpened bool
-        
-        // 실패 임계값을 초과하도록 여러 실패 요청 전송
-        for i := 0; i < 10; i++ {
-            resp := e.GET("/api/circuit-test/failing-endpoint").
-                Expect()
-            
-            statusCode := resp.Raw().StatusCode
-            subLogger.Info("요청 %d: 상태 코드 %d", i+1, statusCode)
-            
-            // 서킷 브레이커가 열렸는지 확인하기 위해 헤더 확인
-            circuitState := resp.Header("X-Circuit-State").Raw()
-            subLogger.Info("서킷 상태: %s", circuitState)
-            
-            if circuitState == "open" {
-                circuitOpened = true
-                subLogger.Info("서킷 브레이커가 열림 상태로 전환됨 (요청 %d 이후)", i+1)
-                break
-            }
-            
-            // 0.5초 대기
-            time.Sleep(500 * time.Millisecond)
-        }
-        
-        // 서킷 브레이커 동작 확인
-        if !circuitOpened {
-            subLogger.Warn("여러 실패 후에도 서킷 브레이커가 열리지 않음")
-            t.Logf("서킷 브레이커가 구현되지 않았거나 작동하지 않을 수 있음")
-        } else {
-            subLogger.Info("서킷 브레이커 정상 작동: 실패 임계값 초과 후 열림")
-        }
-    })
-    
-    t.Run("서킷 브레이커 복구", func(t *testing.T) {
-        subLogger := logger.TestContext("서킷 브레이커 복구 테스트")
-        
-        // 서킷 브레이커가 반열림 상태로 전환될 때까지 대기
-        subLogger.Info("서킷 브레이커 반열림 상태 대기 중...")
-        time.Sleep(10 * time.Second)
-        
-        // 복구된 서비스 엔드포인트로 요청
-        subLogger.Info("복구된 엔드포인트로 요청 중...")
-        resp := e.GET("/api/circuit-test/recovered-endpoint").
-            Expect()
-        
-        statusCode := resp.Raw().StatusCode
-        circuitState := resp.Header("X-Circuit-State").Raw()
-        
-        subLogger.Info("복구 후 상태 코드: %d, 서킷 상태: %s", statusCode, circuitState)
-        
-        // 몇 번의 성공적인 요청 후에는 서킷이 닫혀야 함
-        if statusCode == http.StatusOK {
-            subLogger.Info("성공적인 요청으로 서킷 상태 변경 시도 중...")
-            
-            // 추가 요청으로 서킷 상태 확인
-            var circuitClosed bool
-            for i := 0; i < 3; i++ {
-                resp := e.GET("/api/circuit-test/recovered-endpoint").
-                    Expect().
-                    Status(http.StatusOK)
-                
-                circuitState = resp.Header("X-Circuit-State").Raw()
-                if circuitState == "closed" {
-                    circuitClosed = true
-                    subLogger.Info("서킷 브레이커가 다시 닫힘 상태로 전환됨")
-                    break
-                }
-                
-                subLogger.Info("서킷 상태 확인 중 (%d/3): %s", i+1, circuitState)
-                time.Sleep(1 * time.Second)
-            }
-            
-            if !circuitClosed {
-                subLogger.Warn("성공적인 요청 후에도 서킷이 닫히지 않음")
-            }
-        } else {
-            subLogger.Warn("복구 요청이 실패함: 상태 코드 %d", statusCode)
-        }
-    })
+	// 테스트 서버 설정 
+	mockServer := mocks.NewMockServer(t, mocks.WithServerOptions{
+		EnableFaultInjection: true,
+	})
+	defer mockServer.Close()
+
+	// 테스트 클라이언트 생성
+	e := httpexpect.New(t, integration.GetGatewayURL())
+
+	// 서킷 브레이커 테스트
+	t.Run("CircuitBreakerTripping", func(t *testing.T) {
+		// 오류 주입 활성화
+		mockServer.EnableFault(500, 0)
+
+		// 연속해서 여러 번 요청하면 서킷 브레이커가 열려야 함
+		var lastStatus int
+		tripped := false
+		for i := 0; i < 10; i++ {
+			resp := e.GET("/api/fault-test").
+				Expect()
+
+			lastStatus = resp.Raw().StatusCode
+			if lastStatus == http.StatusServiceUnavailable {
+				tripped = true
+				break
+			}
+
+			// 약간의 지연 추가 (서킷 브레이커 상태 업데이트 시간 허용)
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		assert.True(t, tripped, "연속된 오류 후 서킷 브레이커가 열려야 함")
+
+		// 오류 주입 비활성화
+		mockServer.DisableFault()
+
+		// 서킷 브레이커가 열린 상태에서는 요청이 바로 실패해야 함
+		resp := e.GET("/api/fault-test").
+			Expect()
+
+		assert.Equal(t, http.StatusServiceUnavailable, resp.Raw().StatusCode,
+			"서킷 브레이커가 열린 상태에서는 요청이 즉시 실패해야 함")
+
+		// 타임아웃 대기 (서킷 브레이커 타임아웃 동안)
+		time.Sleep(5 * time.Second)
+
+		// 타임아웃 후에는 반열림 상태가 되어 일부 요청이 허용되어야 함
+		resp = e.GET("/api/fault-test").
+			Expect()
+
+		assert.Equal(t, http.StatusOK, resp.Raw().StatusCode,
+			"타임아웃 후에는 요청이 성공해야 함 (반열림 상태)")
+	})
+
+	t.Run("CircuitBreakerRecovery", func(t *testing.T) {
+		// 오류 주입 활성화
+		mockServer.EnableFault(500, 0)
+
+		// 서킷 브레이커가 열리도록 여러 번 요청
+		for i := 0; i < 10; i++ {
+			_ = e.GET("/api/fault-test").Expect()
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		// 서킷 브레이커가 열렸는지 확인
+		resp := e.GET("/api/fault-test").
+			Expect()
+		assert.Equal(t, http.StatusServiceUnavailable, resp.Raw().StatusCode,
+			"서킷 브레이커가 열려야 함")
+
+		// 오류 주입 비활성화 (정상 작동으로 복원)
+		mockServer.DisableFault()
+
+		// 타임아웃 대기
+		time.Sleep(5 * time.Second)
+
+		// 서비스가 정상화된 상태에서 연속 성공 요청
+		for i := 0; i < 5; i++ {
+			resp := e.GET("/api/fault-test").
+				Expect()
+
+			assert.Equal(t, http.StatusOK, resp.Raw().StatusCode,
+				"%d번째 회복 요청이 성공해야 함", i+1)
+			time.Sleep(100 * time.Millisecond) // 약간의 지연
+		}
+
+		// 서킷 브레이커가 정상 상태로 복구되었는지 확인
+		for i := 0; i < 10; i++ {
+			resp := e.GET("/api/fault-test").
+				Expect()
+
+			assert.Equal(t, http.StatusOK, resp.Raw().StatusCode,
+				"서킷 브레이커 복구 후에는 모든 요청이 성공해야 함")
+		}
+	})
+
+	t.Run("CircuitBreakerPartialFailure", func(t *testing.T) {
+		// 부분 오류 주입 (50% 확률로 오류)
+		mockServer.EnableFault(500, 0.5)
+
+		// 부분 오류 상황에서 여러 번 요청
+		successCount := 0
+		failureCount := 0
+
+		for i := 0; i < 20; i++ {
+			resp := e.GET("/api/fault-test").
+				Expect()
+
+			if resp.Raw().StatusCode == http.StatusOK {
+				successCount++
+			} else {
+				failureCount++
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		// 부분 성공 및 실패 확인
+		assert.True(t, successCount > 0, "일부 요청은 성공해야 함")
+		assert.True(t, failureCount > 0, "일부 요청은 실패해야 함")
+
+		// 오류 주입 비활성화
+		mockServer.DisableFault()
+
+		// 정상화 대기
+		time.Sleep(5 * time.Second)
+
+		// 복구 확인
+		for i := 0; i < 5; i++ {
+			resp := e.GET("/api/fault-test").
+				Expect()
+
+			assert.Equal(t, http.StatusOK, resp.Raw().StatusCode,
+				"정상화 후에는 모든 요청이 성공해야 함")
+		}
+	})
 }

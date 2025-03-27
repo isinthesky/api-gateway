@@ -1,13 +1,12 @@
 package mocks
 
 import (
-    "fmt"
-    "net/http"
-    "net/http/httptest"
-    "sync/atomic"
-    "time"
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
+	"time"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 // FaultServer는 다양한 장애 시나리오를 시뮬레이션하는 서버입니다
@@ -71,7 +70,7 @@ func (fs *FaultServer) intermittentFailureHandler(c *gin.Context) {
     // 3회마다 500 오류 반환
     if count%3 == 0 {
         c.JSON(http.StatusInternalServerError, gin.H{
-            "error": "간헐적 백엔드 장애"
+            "error": "간헐적 백엔드 장애",
         })
         return
     }

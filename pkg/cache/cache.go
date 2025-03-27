@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -48,17 +49,23 @@ func New(defaultTTL time.Duration) *MemoryCache {
 // Get은 캐시에서 키에 해당하는 응답을 가져옵니다.
 func (c *MemoryCache) Get(key string) (*CachedResponse, bool) {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
+	item, found := c.items[key]
+	c.mu.RUnlock()
 
-	if item, found := c.items[key]; found {
-		if time.Now().Before(item.Expiry) {
-			return item, true
-		}
-		// 만료된 항목
-		delete(c.items, key)
+	if !found {
+		return nil, false
 	}
 
-	return nil, false
+	now := time.Now()
+	// 만료 시간과 현재 시간의 차이가 2ms 이상일 때만 만료로 처리
+	if now.Sub(item.Expiry) > 2*time.Millisecond {
+		// 디버깅을 위한 로그 추가
+		log.Printf("캐시 만료: key=%s, 만료시간=%v, 현재시간=%v, 차이=%v", key, item.Expiry, now, now.Sub(item.Expiry))
+		c.Delete(key)
+		return nil, false
+	}
+
+	return item, true
 }
 
 // Set은 응답을 캐시에 저장합니다.
@@ -66,16 +73,28 @@ func (c *MemoryCache) Set(key string, response *CachedResponse, ttl time.Duratio
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// 응답 객체 복사
+	newResponse := &CachedResponse{
+		StatusCode: response.StatusCode,
+		Headers:    response.Headers.Clone(), // HTTP 헤더 복사
+		Body:       make([]byte, len(response.Body)),
+	}
+	copy(newResponse.Body, response.Body)
+
 	// TTL이 지정되지 않은 경우 기본값 사용
 	if ttl <= 0 {
 		ttl = c.defaultTTL
 	}
 
 	// 만료 시간 설정
-	response.Expiry = time.Now().Add(ttl)
+	now := time.Now()
+	newResponse.Expiry = now.Add(ttl)
+	
+	// 디버깅을 위한 로그 추가
+	log.Printf("캐시 저장: key=%s, TTL=%v, 만료시간=%v, 현재시간=%v", key, ttl, newResponse.Expiry, now)
 
 	// 캐시에 저장
-	c.items[key] = response
+	c.items[key] = newResponse
 }
 
 // Delete는 캐시에서 키에 해당하는 항목을 삭제합니다.

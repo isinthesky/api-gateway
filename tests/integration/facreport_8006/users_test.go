@@ -1,12 +1,12 @@
 package facreport_8006_test
 
 import (
-    "net/http"
-    "testing"
+	"net/http"
+	"testing"
 
-    "github.com/gavv/httpexpect/v2"
-    "github.com/isinthesky/api-gateway/tests/integration"
-    "github.com/isinthesky/api-gateway/tests/utils"
+	"github.com/gavv/httpexpect/v2"
+	"github.com/isinthesky/api-gateway/tests/integration"
+	"github.com/isinthesky/api-gateway/tests/utils"
 )
 
 func TestUsers(t *testing.T) {

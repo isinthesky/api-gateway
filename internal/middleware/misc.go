@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -116,5 +117,5 @@ func RecoveryWithJSON() gin.HandlerFunc {
 func GenerateUUID() string {
 	// 실제 구현에서는 github.com/google/uuid 같은 라이브러리 사용 권장
 	now := time.Now().UnixNano()
-	return string(now)
+	return strconv.FormatInt(now, 10)
 }

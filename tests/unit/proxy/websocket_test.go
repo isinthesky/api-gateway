@@ -1,15 +1,15 @@
 package proxy_test
 
 import (
-    "net/http"
-    "net/http/httptest"
-    "strings"
-    "testing"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
 
-    "github.com/gin-gonic/gin"
-    "github.com/gorilla/websocket"
-    "github.com/stretchr/testify/assert"
-    "github.com/isinthesky/api-gateway/proxy"
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/isinthesky/api-gateway/internal/proxy"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWebSocketProxyHandler(t *testing.T) {

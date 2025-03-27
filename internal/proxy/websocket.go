@@ -39,6 +39,19 @@ func NewWSProxy(backendBaseURL string) (*WSProxy, error) {
 	}, nil
 }
 
+// NewWebSocketProxy는 새로운 WebSocket 프록시를 생성합니다.
+func NewWebSocketProxy(backendBaseURL string, upgrader websocket.Upgrader) *WSProxy {
+	url, err := url.Parse(backendBaseURL)
+	if err != nil {
+		return nil
+	}
+
+	return &WSProxy{
+		backendURL: url,
+		upgrader:   upgrader,
+	}
+}
+
 // WSProxyHandler는 WebSocket 연결을 프록시하는 Gin 핸들러 함수를 반환합니다.
 func WSProxyHandler(proxy *WSProxy) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -111,4 +124,9 @@ func relay(src, dst *websocket.Conn, messageChan chan []byte, errorChan chan err
 
 		messageChan <- message
 	}
+}
+
+// WebSocketProxyHandler는 WSProxyHandler의 별칭입니다. (이전 호환성 유지)
+func WebSocketProxyHandler(proxy *WSProxy) gin.HandlerFunc {
+	return WSProxyHandler(proxy)
 }
