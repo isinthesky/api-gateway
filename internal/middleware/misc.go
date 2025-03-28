@@ -14,7 +14,7 @@ func CookieToHeader() gin.HandlerFunc {
 		// Authorization 헤더가 없는 경우에만 쿠키 확인
 		if c.GetHeader("Authorization") == "" {
 			// 인증 토큰 쿠키 확인
-			tokenCookie, err := c.Cookie("auth_token")
+			tokenCookie, err := c.Cookie("access_token")
 			if err == nil && tokenCookie != "" {
 				// 쿠키 값을 Authorization 헤더로 추가
 				c.Request.Header.Set("Authorization", "Bearer "+tokenCookie)

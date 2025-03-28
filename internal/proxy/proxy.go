@@ -73,9 +73,6 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetURL string, stripPrefix bool) gin.
 
 // ForwardRequest는 HTTP 요청을 대상 서버로 전달합니다.
 func ForwardRequest(ctx context.Context, req *http.Request, targetURL string, stripPath bool, stripPrefix string) (*http.Response, error) {
-	log.Printf("[PROXY-FWD] 요청 경로 처리 시작 - 원본 URL: %s, StripPath: %v, StripPrefix: %s", 
-		req.URL.String(), stripPath, stripPrefix)
-	
 	// 대상 URL 파싱
 	target, err := url.Parse(targetURL)
 	if err != nil {
@@ -129,7 +126,6 @@ func ForwardRequest(ctx context.Context, req *http.Request, targetURL string, st
 		// 기존 경로 유지, 테스트 시나리오에 맞게 수정
 		// TestHTTPProxyHandler에서는 /test/api -> /api 처리가 필요함
 		orgPath := req.URL.Path
-		log.Printf("[PROXY-FWD] StripPath 미적용 - 원본 경로: %s, 대상 경로 기본값: %s", orgPath, orgPath)
 		
 		// 경로에서 /test/ 부분을 제거하여 /api로 변환
 		if strings.HasPrefix(orgPath, "/test/") {
