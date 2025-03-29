@@ -11,8 +11,8 @@ services:
       - PORT=8080
       - BACKEND_URL=http://mock-service:8081
       - ALLOWED_ORIGINS=*
-      - JWT_SECRET=your-secret-key-change-in-production
-      - JWT_ISSUER=api-gateway
+      - JWT_SECRET_KEY=your_jwt_secret_key_here
+      - JWT_ISSUER=receiptally-auth-service
       - JWT_EXPIRATION=3600
       - ENABLE_METRICS=true
       - LOG_LEVEL=info

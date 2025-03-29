@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # API Gateway (개발 모드)
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: api-gateway-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=debug
+      - JWT_SECRET_KEY=your_jwt_secret_key_here
+      - JWT_ISSUER=receiptally-auth-service
+      - JWT_EXPIRATION=3600
+      - ALLOWED_ORIGINS=*
+      - ENABLE_METRICS=true
+      - ENABLE_CACHING=true
+      - GIN_MODE=debug
+    volumes:
+      # 소스 코드 마운트 (코드 변경 시 자동 감지)
+      - ./:/app
+      # Go 캐시 유지 (빌드 속도 개선)
+      - go-cache:/go
+    restart: unless-stopped
+    networks:
+      - gateway-network
+    # 다른 서비스들에 대한 의존성 설정
+    depends_on:
+      - receipt-service
+      - auth-service
+      - web-client
+  
+  # 백엔드 서비스들 (프로젝트 구조에 맞게 조정 필요)
+  receipt-service:
+    image: nginx:alpine  # 실제 서비스로 대체 필요
+    container_name: receipt-service-mock
+    volumes:
+      - ./tests/mocks/receipt-service:/usr/share/nginx/html
+    ports:
+      - "8001:8000"
+    networks:
+      - gateway-network
+
+  auth-service:
+    image: nginx:alpine  # 실제 서비스로 대체 필요
+    container_name: auth-service-mock
+    volumes:
+      - ./tests/mocks/auth-service:/usr/share/nginx/html
+    ports:
+      - "8002:8000"
+    networks:
+      - gateway-network
+
+  web-client:
+    image: nginx:alpine  # 실제 서비스로 대체 필요
+    container_name: web-client-mock
+    volumes:
+      - ./tests/mocks/web-client:/usr/share/nginx/html
+    ports:
+      - "3000:3000"
+    networks:
+      - gateway-network
+
+volumes:
+  go-cache:  # Go 모듈 캐시 유지
+
+networks:
+  gateway-network:
+    driver: bridge 

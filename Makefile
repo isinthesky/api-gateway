@@ -1,4 +1,4 @@
-.PHONY: all build clean test coverage lint run docker-build docker-run help
+.PHONY: all build clean test coverage lint run docker-build docker-run docker-dev docker-dev-build docker-dev-stop help
 
 # 기본 변수 설정
 APP_NAME := api-gateway
@@ -15,6 +15,31 @@ LD_FLAGS := -ldflags "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X mai
 
 # 기본 작업: 빌드
 all: clean build
+
+# 개발 환경 Docker 빌드 및 실행
+docker-dev-build:
+	@echo "Building development Docker image..."
+	@docker-compose -f docker-compose.dev.yml build
+
+# 개발 환경 Docker 실행
+docker-dev:
+	@echo "Starting development environment..."
+	@docker-compose -f docker-compose.dev.yml up
+
+# 개발 환경 Docker 백그라운드 실행
+docker-dev-detach:
+	@echo "Starting development environment in detached mode..."
+	@docker-compose -f docker-compose.dev.yml up -d
+
+# 개발 환경 Docker 로그 보기
+docker-dev-logs:
+	@echo "Viewing development environment logs..."
+	@docker-compose -f docker-compose.dev.yml logs -f
+
+# 개발 환경 Docker 중지
+docker-dev-stop:
+	@echo "Stopping development environment..."
+	@docker-compose -f docker-compose.dev.yml down
 
 # 빌드 작업
 build:
@@ -144,6 +169,11 @@ help:
 	@echo "  make refactor-check - Check for refactoring opportunities"
 	@echo "  make docker-build - Build Docker image"
 	@echo "  make docker-run   - Run Docker container"
+	@echo "  make docker-dev-build - Build development Docker image"
+	@echo "  make docker-dev   - Start development environment"
+	@echo "  make docker-dev-detach - Start dev environment in background"
+	@echo "  make docker-dev-logs - View dev environment logs"
+	@echo "  make docker-dev-stop - Stop development environment"
 	@echo "  make deps-update  - Update dependencies"
 	@echo "  make deps-check   - Verify dependencies"
 	@echo "  make dev          - Run with live reload"

@@ -43,7 +43,7 @@ USER 1000:1000
 
 # 환경 변수 설정
 ENV PORT=8000 \
-    LOG_LEVEL=info \
+    LOG_LEVEL=debug \
     ROUTES_CONFIG_PATH=/etc/gateway/configs/routes.json \
     BACKEND_URL=http://receipt-service:8000 \
     FRONTEND_URL=http://web-client:3000 \

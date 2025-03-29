@@ -3,18 +3,18 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-# Go 빌드 명령어
-cmd = "go build -o ./tmp/main ."
+# Go 빌드 명령어 - API Gateway 진입점으로 수정
+cmd = "go build -o ./tmp/gateway ./cmd/gateway"
 # 빌드된 바이너리 경로
-bin = "tmp/main"
+bin = "tmp/gateway"
 # 감시할 파일 확장자
-include_ext = ["go", "json"]
+include_ext = ["go", "json", "yml", "yaml"]
 # 제외할 디렉토리
-exclude_dir = ["assets", "tmp", "vendor"]
+exclude_dir = ["assets", "tmp", "vendor", "tests", "test-reports"]
 # 제외할 파일
 exclude_file = []
-# 감시 활성화 여부
-delay = 1000 # ms
+# 변경 감지 지연
+delay = 500 # ms
 # 빌드 시 중지
 stop_on_error = true
 # 로그 출력

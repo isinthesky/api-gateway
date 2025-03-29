@@ -13,8 +13,8 @@ services:
       - PORT=8080
       - LOG_LEVEL=info
       - BACKEND_URLS=http://service1:8081,http://service2:8082,http://service3:8083
-      - JWT_SECRET=your-secret-key-change-in-production
-      - JWT_ISSUER=api-gateway
+      - JWT_SECRET_KEY=your_jwt_secret_key_here
+      - JWT_ISSUER=receiptally-auth-service
       - JWT_EXPIRATION=3600
       - ALLOWED_ORIGINS=*
       - ENABLE_METRICS=true
