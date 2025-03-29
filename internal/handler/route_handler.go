@@ -89,6 +89,29 @@ func (h *RouteHandler) RegisterRoutes(router *gin.Engine) error {
 	var rootCatchAllRoute *config.Route  // 루트 캐치올 라우트 ("/*proxyPath")
 	var wsRoutes []config.Route          // WebSocket 라우트
 
+	// WebSocket 라우트 추가 (설정에 존재하지 않는 경우)
+	wsPathExists := false
+	for _, route := range routes {
+		if strings.HasPrefix(route.Path, "/ws") || strings.HasPrefix(route.Path, "/websocket") {
+			wsPathExists = true
+			break
+		}
+	}
+	
+	// WebSocket 라우트가 없으면 기본 WebSocket 라우트 추가
+	if !wsPathExists {
+		log.Println("기본 WebSocket 라우트 추가: /ws/* -> 기본 대상")
+		wsRoute := config.Route{
+			Path:       "/ws/*path",
+			TargetURL:  "ws://web-client:3000/ws",  // 기본 WebSocket 대상
+			Methods:    []string{"GET"},
+			RequireAuth: false,
+			Cacheable:  false,
+			Timeout:    30,
+		}
+		routes = append(routes, wsRoute)
+	}
+
 	// 라우트 분류
 	for _, route := range routes {
 		// WebSocket 라우트
@@ -286,6 +309,22 @@ func (h *RouteHandler) httpProxyHandler(route config.Route) gin.HandlerFunc {
 		// 경로 스트립 여부 결정
 		stripPath := route.StripPrefix != ""
 
+		// WebSocket 요청인지 확인
+		if websocket.IsWebSocketUpgrade(c.Request) {
+			log.Printf("[WARN] HTTP 핸들러로 WebSocket 요청이 들어왔습니다: %s - WebSocket 핸들러로 리다이렉트합니다", c.Request.URL.Path)
+			
+			// WebSocket 요청은 별도 처리
+			wsTargetURL := targetPath
+			if strings.HasPrefix(wsTargetURL, "http://") {
+				wsTargetURL = "ws://" + strings.TrimPrefix(wsTargetURL, "http://")
+			} else if strings.HasPrefix(wsTargetURL, "https://") {
+				wsTargetURL = "wss://" + strings.TrimPrefix(wsTargetURL, "https://")
+			}
+			
+			proxy.WebSocketProxy(c.Writer, c.Request, wsTargetURL, h.wsUpgrader)
+			return
+		}
+
 		// 서킷 브레이커를 통해 요청 실행
 		resp, err := h.circuitBreaker.Execute(
 			func() (interface{}, error) {
@@ -330,12 +369,18 @@ func (h *RouteHandler) httpProxyHandler(route config.Route) gin.HandlerFunc {
 		// 응답 상태 코드 설정
 		c.Writer.WriteHeader(httpResp.StatusCode)
 
-		// 응답 본문 복사
+		// 응답 본문 복사 - 상태 코드에 따라 본문 복사 여부 결정
 		if httpResp.Body != nil {
 			defer httpResp.Body.Close()
-			_, err = io.Copy(c.Writer, httpResp.Body)
-			if err != nil {
-				log.Printf("[ERROR] 응답 본문 읽기 오류: %v", err)
+			
+			// WebSocket 전환, 본문 없음, 캐시된 응답 등의 특수 상태 코드 확인
+			if httpResp.StatusCode != http.StatusSwitchingProtocols && 
+			   httpResp.StatusCode != http.StatusNoContent && 
+			   httpResp.StatusCode != http.StatusNotModified {
+				_, err = io.Copy(c.Writer, httpResp.Body)
+				if err != nil {
+					log.Printf("[ERROR] 응답 본문 읽기 오류: %v", err)
+				}
 			}
 		}
 	}
@@ -344,6 +389,14 @@ func (h *RouteHandler) httpProxyHandler(route config.Route) gin.HandlerFunc {
 // webSocketProxyHandler는 WebSocket 요청을 프록시하는 핸들러를 반환합니다.
 func (h *RouteHandler) webSocketProxyHandler(route config.Route) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// WebSocket 요청인지 확인
+		if !websocket.IsWebSocketUpgrade(c.Request) {
+			log.Printf("[WARN] WebSocket 핸들러로 일반 HTTP 요청이 들어왔습니다: %s", c.Request.URL.Path)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "WebSocket 업그레이드 요청이 아닙니다"})
+			c.Abort()
+			return
+		}
+		
 		// 로드 밸런서에서 대상 서버 선택
 		targetURL, err := h.loadBalancer.NextTarget()
 		if err != nil {
@@ -354,15 +407,29 @@ func (h *RouteHandler) webSocketProxyHandler(route config.Route) gin.HandlerFunc
 
 		// 라우트별 대상 경로 구성
 		targetPath := route.TargetURL
+		
+		// 대상 URL이 WebSocket 스킴이 아닌 경우 변환
 		if !strings.HasPrefix(targetPath, "ws://") && !strings.HasPrefix(targetPath, "wss://") {
-			// HTTP 또는 HTTPS 스킴을 WebSocket 스킴으로 변환
+			// HTTP/HTTPS URL을 WS/WSS로 변환
 			if strings.HasPrefix(targetURL, "https://") {
 				targetURL = "wss://" + strings.TrimPrefix(targetURL, "https://")
 			} else {
 				targetURL = "ws://" + strings.TrimPrefix(targetURL, "http://")
 			}
-			targetPath = fmt.Sprintf("%s%s", targetURL, targetPath)
+			
+			// 대상 경로 구성
+			if strings.HasSuffix(targetURL, "/") && strings.HasPrefix(targetPath, "/") {
+				// 중복 슬래시 방지
+				targetPath = targetURL + strings.TrimPrefix(targetPath, "/")
+			} else if !strings.HasSuffix(targetURL, "/") && !strings.HasPrefix(targetPath, "/") {
+				// 슬래시 추가
+				targetPath = targetURL + "/" + targetPath
+			} else {
+				targetPath = targetURL + targetPath
+			}
 		}
+		
+		log.Printf("[WS] WebSocket 프록시 시작: %s -> %s", c.Request.URL.Path, targetPath)
 
 		// WebSocket 핸들러 호출
 		proxy.WebSocketProxy(c.Writer, c.Request, targetPath, h.wsUpgrader)
