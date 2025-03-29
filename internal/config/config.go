@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -48,8 +49,8 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Port:                      getEnvInt("PORT", 8080),
 		DefaultBackend:            getEnv("BACKEND_URL", "http://localhost:8081"),
-		JWTSecret:                 getEnv("JWT_SECRET", "your-secret-key"),
-		JWTIssuer:                 getEnv("JWT_ISSUER", "api-gateway"),
+		JWTSecret:                 getEnv("JWT_SECRET_KEY", "your_jwt_secret_key_here"),
+		JWTIssuer:                 getEnv("JWT_ISSUER", "receiptally-auth-service"),
 		JWTExpirationDelta:        time.Duration(getEnvInt("JWT_EXPIRATION", 3600)) * time.Second,
 		AllowedOrigins:            getEnvArray("ALLOWED_ORIGINS", []string{"*"}),
 		EnableMetrics:             getEnvBool("ENABLE_METRICS", true),
@@ -93,6 +94,9 @@ func Load() (*Config, error) {
 // LoadRoutes는 라우트 구성 파일을 로드합니다.
 func (c *Config) LoadRoutes() ([]Route, error) {
 	data, err := os.ReadFile(c.RoutesConfigPath)
+
+	log.Println("LoadRoutes", c.RoutesConfigPath)
+
 	if err != nil {
 		return nil, fmt.Errorf("라우트 구성 파일 읽기 실패: %v", err)
 	}

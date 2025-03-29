@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -73,6 +74,7 @@ func NewRouteHandler(
 func (h *RouteHandler) RegisterRoutes(router *gin.Engine) error {
 	// 헬스 체크 엔드포인트
 	router.GET("/health", h.HealthCheckHandler)
+
 
 	// 라우트 설정 로드
 	routes, err := h.config.LoadRoutes()
@@ -234,14 +236,19 @@ func (h *RouteHandler) registerWebSocketRoute(router *gin.Engine, route config.R
 // buildHandlerChain은 라우트에 필요한 미들웨어 핸들러 체인을 구성합니다.
 func (h *RouteHandler) buildHandlerChain(route config.Route) []gin.HandlerFunc {
 	var handlers []gin.HandlerFunc
-	
+
+	log.Printf("라우트 핸들러 체인 구성: %s, 인증 필요: %v\n", route.Path, route.RequireAuth)
+    
 	// 타임아웃 미들웨어 (지정된 경우)
 	if route.Timeout > 0 {
 		handlers = append(handlers, h.timeoutMiddleware(time.Duration(route.Timeout)*time.Second))
 	}
-	
+
+	handlers = append(handlers, h.cookieToHeaderMiddleware())
+
 	// 인증 미들웨어 (필요한 경우)
 	if route.RequireAuth {
+		log.Println("authMiddleware 추가")
 		handlers = append(handlers, h.authMiddleware())
 	}
 	
@@ -394,32 +401,53 @@ func (h *RouteHandler) timeoutMiddleware(timeout time.Duration) gin.HandlerFunc 
 	}
 }
 
+
+// authMiddleware는 JWT 인증을 수행하는 핸들러를 반환합니다.
+func (h *RouteHandler) cookieToHeaderMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {		
+		tokenCookie, err := c.Cookie("access_token")
+		if err == nil && tokenCookie != "" {
+			c.Request.Header.Set("Authorization", "Bearer "+tokenCookie)
+		}
+
+		c.Next()
+	}
+}
+
 // authMiddleware는 JWT 인증을 수행하는 핸들러를 반환합니다.
 func (h *RouteHandler) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Authorization 헤더에서 JWT 추출
+		
+		// Authorization 헤더 확인
 		authHeader := c.GetHeader("Authorization")
+		
+		// 토큰이 없는 경우
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "인증 토큰이 필요합니다"})
+			os.Stdout.Write([]byte(fmt.Sprintf("인증 실패: 토큰 없음\n")))
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "인증 토큰이 필요합니다2"})
 			c.Abort()
 			return
 		}
 
-		// "Bearer " 접두사 확인 및 제거
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		// Bearer 토큰 추출
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token == authHeader {
+			os.Stdout.Write([]byte(fmt.Sprintf("인증 실패: 유효하지 않은 토큰 형식\n")))
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "유효하지 않은 인증 형식입니다"})
 			c.Abort()
 			return
 		}
 
 		// 토큰 검증
-		claims, err := h.authenticator.VerifyToken(parts[1])
+		claims, err := h.authenticator.VerifyToken(token)
 		if err != nil {
+			os.Stdout.Write([]byte(fmt.Sprintf("인증 실패: 토큰 검증 실패 - %v\n", err)))
 			c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("인증 실패: %v", err)})
 			c.Abort()
 			return
 		}
+
+		os.Stdout.Write([]byte(fmt.Sprintf("인증 성공 - 사용자 ID: %s, 역할: %v\n", claims.Subject, claims.Roles)))
 
 		// 인증 정보를 컨텍스트에 저장
 		c.Set("userId", claims.Subject)

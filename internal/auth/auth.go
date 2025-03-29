@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -10,7 +11,14 @@ import (
 
 // Claims는 JWT 토큰에 포함되는 클레임(claim) 정보를 담는 구조체입니다.
 type Claims struct {
-	Roles []string `json:"roles"`
+	// 사용자 정보
+	Email      string   `json:"email"`
+	Name       string   `json:"name"`
+	Username   string   `json:"username"`
+	Provider   string   `json:"provider"`
+	ProviderID string   `json:"provider_id"`
+	Picture    string   `json:"picture"`
+	Roles      []string `json:"roles"`
 	jwt.RegisteredClaims
 }
 
@@ -38,6 +46,8 @@ func New(secretKey, issuer string, expirationDelta time.Duration) Authenticator 
 
 // GenerateToken은 사용자 ID와 역할을 기반으로 JWT 토큰을 생성합니다.
 func (a *JWTAuthenticator) GenerateToken(userID string, roles []string) (string, error) {
+	log.Println("GenerateToken", userID, roles)
+
 	if userID == "" {
 		return "", errors.New("유효한 사용자 ID가 필요합니다")
 	}
@@ -67,6 +77,8 @@ func (a *JWTAuthenticator) GenerateToken(userID string, roles []string) (string,
 
 // VerifyToken은 JWT 토큰의 유효성을 검증하고 클레임을 반환합니다.
 func (a *JWTAuthenticator) VerifyToken(tokenString string) (*Claims, error) {
+	log.Println("VerifyToken", tokenString)
+	
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		// 서명 방식 확인
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

@@ -1,7 +1,7 @@
 {"routes":[
     {
         "path": "/api/v1/main/*path",
-        "targetURL": "http://receipt-service:8000",
+        "targetURL": "http://receipt-service:8000/api/v1/main",
         "methods": ["GET", "POST", "PUT", "DELETE"],
         "stripPrefix":"",
         "requireAuth": true,

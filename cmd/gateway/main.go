@@ -34,12 +34,16 @@ func main() {
 		log.Fatalf("설정 로드 실패: %v", err)
 	}
 
+	log.Println("설정 로드 완료:", cfg)
+
 	// Gin 모드 설정
-	if cfg.LogLevel == "debug" {
-		gin.SetMode(gin.DebugMode)
-	} else {
-		gin.SetMode(gin.ReleaseMode)
-	}
+	// if cfg.LogLevel == "debug" {
+	// 	gin.SetMode(gin.DebugMode)
+	// } else {
+	// 	gin.SetMode(gin.ReleaseMode)
+	// }
+
+	gin.SetMode(gin.DebugMode)
 
 	// 라우터 생성
 	router := gin.New()

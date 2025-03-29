@@ -52,7 +52,6 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetURL string, stripPrefix bool) gin.
 			c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 			return
 		}
-		defer resp.Body.Close()
 
 		// 응답 헤더 복사
 		for key, values := range resp.Header {
@@ -64,9 +63,15 @@ func HTTPProxyHandler(proxy *HTTPProxy, targetURL string, stripPrefix bool) gin.
 		// 응답 상태 코드 설정
 		c.Status(resp.StatusCode)
 
-		// 응답 본문 복사
-		if _, err := io.Copy(c.Writer, resp.Body); err != nil {
-			log.Printf("응답 본문 복사 실패: %v", err)
+		// 응답 본문 복사 - 상태 코드에 따라 본문 복사 여부 결정
+		if resp.Body != nil && resp.StatusCode != 101 && resp.StatusCode != 204 && resp.StatusCode != 304 {
+			defer resp.Body.Close()
+			_, err = io.Copy(c.Writer, resp.Body)
+			if err != nil {
+				log.Printf("[ERROR] 응답 본문 읽기 오류: %v", err)
+			}
+		} else if resp.Body != nil {
+			resp.Body.Close()
 		}
 	}
 }
